@@ -16,7 +16,6 @@ import pandas as pd
 import re
 import zipfile
 import io
-from pathlib import Path
 
 # =========================================================
 # CONFIGURACIÓN
@@ -36,7 +35,7 @@ Sube varios archivos PDF y la aplicación:
 ✅ Extraerá DNI y nombre  
 ✅ Renombrará los PDFs automáticamente  
 ✅ Generará un Excel resumen  
-✅ Creará un ZIP descargable
+✅ Creará un ZIP descargable con TODOS los PDFs
 """)
 
 # =========================================================
@@ -62,13 +61,19 @@ def extraer_datos(texto):
     ]
 
     for patron in patrones:
-        match = re.search(patron, texto, re.IGNORECASE | re.DOTALL)
+
+        match = re.search(
+            patron,
+            texto,
+            re.IGNORECASE | re.DOTALL
+        )
 
         if match:
+
             nombre = match.group(1).strip()
             dni = match.group(2).strip()
 
-            # Limpiar espacios extra
+            # Limpiar espacios múltiples
             nombre = " ".join(nombre.split())
 
             return dni, nombre
@@ -83,18 +88,25 @@ def limpiar_nombre(nombre):
     return re.sub(r'[\\/:*?"<>|]', '', nombre)
 
 # =========================================================
-# PROCESAR
+# PROCESAR PDFs
 # =========================================================
 
 if uploaded_files:
 
+    st.success(f"✅ {len(uploaded_files)} PDFs cargados")
+
     if st.button("🚀 Procesar PDFs"):
 
         resultados = []
+
         zip_buffer = io.BytesIO()
 
         total_ok = 0
         total_error = 0
+
+        # =====================================================
+        # CREAR ZIP
+        # =====================================================
 
         with zipfile.ZipFile(zip_buffer, "w") as zipf:
 
@@ -104,7 +116,10 @@ if uploaded_files:
 
                     texto_completo = ""
 
-                    # Leer PDF
+                    # =================================================
+                    # LEER PDF
+                    # =================================================
+
                     with pdfplumber.open(archivo) as pdf:
 
                         for pagina in pdf.pages:
@@ -114,8 +129,15 @@ if uploaded_files:
                             if texto:
                                 texto_completo += texto + "\n"
 
-                    # Extraer datos
+                    # =================================================
+                    # EXTRAER DATOS
+                    # =================================================
+
                     dni, nombre = extraer_datos(texto_completo)
+
+                    # =================================================
+                    # SI ENCUENTRA DATOS
+                    # =================================================
 
                     if dni and nombre:
 
@@ -123,8 +145,11 @@ if uploaded_files:
 
                         nuevo_nombre = f"{dni} - {nombre_limpio}.pdf"
 
-                        # Agregar al ZIP
-                        zipf.writestr(nuevo_nombre, archivo.getvalue())
+                        # Agregar PDF renombrado al ZIP
+                        zipf.writestr(
+                            nuevo_nombre,
+                            archivo.getvalue()
+                        )
 
                         resultados.append({
                             "PDF Original": archivo.name,
@@ -136,39 +161,66 @@ if uploaded_files:
 
                         total_ok += 1
 
+                    # =================================================
+                    # SI NO ENCUENTRA DATOS
+                    # =================================================
+
                     else:
+
+                        # Guardar PDF original
+                        zipf.writestr(
+                            archivo.name,
+                            archivo.getvalue()
+                        )
 
                         resultados.append({
                             "PDF Original": archivo.name,
                             "DNI": "",
                             "Nombre": "",
-                            "Nuevo Nombre": "",
+                            "Nuevo Nombre": archivo.name,
                             "Estado": "NO ENCONTRADO"
                         })
 
                         total_error += 1
 
+                # =====================================================
+                # SI OCURRE ERROR
+                # =====================================================
+
                 except Exception as e:
+
+                    # Guardar PDF original aunque falle
+                    zipf.writestr(
+                        archivo.name,
+                        archivo.getvalue()
+                    )
 
                     resultados.append({
                         "PDF Original": archivo.name,
                         "DNI": "",
                         "Nombre": "",
-                        "Nuevo Nombre": "",
+                        "Nuevo Nombre": archivo.name,
                         "Estado": f"ERROR: {str(e)}"
                     })
 
                     total_error += 1
 
         # =========================================================
-        # DATAFRAME
+        # CREAR DATAFRAME
         # =========================================================
 
         df = pd.DataFrame(resultados)
 
+        # =========================================================
+        # MOSTRAR RESULTADOS
+        # =========================================================
+
         st.subheader("📋 Resultados")
 
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(
+            df,
+            use_container_width=True
+        )
 
         # =========================================================
         # MÉTRICAS
@@ -176,22 +228,37 @@ if uploaded_files:
 
         col1, col2 = st.columns(2)
 
-        col1.metric("✅ Procesados", total_ok)
-        col2.metric("⚠️ Errores", total_error)
+        col1.metric(
+            "✅ Procesados Correctamente",
+            total_ok
+        )
+
+        col2.metric(
+            "⚠️ No encontrados / errores",
+            total_error
+        )
 
         # =========================================================
-        # EXCEL
+        # CREAR EXCEL
         # =========================================================
 
         excel_buffer = io.BytesIO()
 
-        with pd.ExcelWriter(excel_buffer, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False, sheet_name="Resultados")
+        with pd.ExcelWriter(
+            excel_buffer,
+            engine="openpyxl"
+        ) as writer:
+
+            df.to_excel(
+                writer,
+                index=False,
+                sheet_name="Resultados"
+            )
 
         excel_buffer.seek(0)
 
         # =========================================================
-        # DESCARGAS
+        # BOTÓN DESCARGAR EXCEL
         # =========================================================
 
         st.download_button(
@@ -201,11 +268,17 @@ if uploaded_files:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
+        # =========================================================
+        # BOTÓN DESCARGAR ZIP
+        # =========================================================
+
         zip_buffer.seek(0)
 
         st.download_button(
-            label="📦 Descargar ZIP con PDFs Renombrados",
+            label="📦 Descargar ZIP con TODOS los PDFs",
             data=zip_buffer,
-            file_name="PDFs_Renombrados.zip",
+            file_name="PDFs_Procesados.zip",
             mime="application/zip"
         )
+
+        st.success("✅ Proceso finalizado")
