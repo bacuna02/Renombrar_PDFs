@@ -77,7 +77,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("📄 Renombrador Automático de PDFs")
+st.title("📄 Renombrador Masivo de CLA")
 
 st.write("""
 Sube varios archivos PDF y la aplicación:
