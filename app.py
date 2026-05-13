@@ -79,21 +79,12 @@ st.set_page_config(
 
 st.title("📄 Renombrador Masivo de CLA")
 
-st.write("""
-Sube varios archivos PDF y la aplicación:
-
-✅ Extraerá DNI y nombre  
-✅ Renombrará los PDFs automáticamente  
-✅ Generará un Excel resumen  
-✅ Creará un ZIP descargable con TODOS los PDFs
-""")
-
 # =========================================================
 # SUBIR ARCHIVOS
 # =========================================================
 
 uploaded_files = st.file_uploader(
-    "Selecciona PDFs",
+    "Selecciona el(los) documento(s) PDF",
     type=["pdf"],
     accept_multiple_files=True
 )
