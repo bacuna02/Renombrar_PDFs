@@ -16,7 +16,57 @@ import pandas as pd
 import re
 import zipfile
 import io
+from PIL import Image
 
+# ----------------------------
+# LOGO
+# ----------------------------
+logo = Image.open("logo.png")
+st.image(logo, width=400)
+
+# ----------------------------
+# ESTILOS
+# ----------------------------
+page_bg_style = '''
+<style>
+[data-testid="stAppViewContainer"] {
+    background: linear-gradient(to bottom right, #eaeaea, #ffffff);
+    background-attachment: fixed;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #eaeaea;
+}
+
+h1, h2, h3, h4, h5, h6, p, label {
+    color: #a81e35;
+}
+
+.stButton > button {
+    background-color: #a81e35 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 8px 16px !important;
+    font-weight: bold !important;
+    color: white !important;
+}
+
+.stButton > button * {
+    color: white !important;
+    fill: white !important;
+}
+
+.stButton > button:hover {
+    background-color: #000000 !important;
+    color: white !important;
+}
+
+.stButton > button:hover * {
+    color: white !important;
+}
+</style>
+'''
+st.markdown(page_bg_style, unsafe_allow_html=True)
 # =========================================================
 # CONFIGURACIÓN
 # =========================================================
